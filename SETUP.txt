@@ -1,0 +1,39 @@
+THE READING EDIT — AUTOMATIC DAILY PUBLISHING
+
+This upgrade adds a GitHub Actions workflow and an AI-powered article curator.
+It does not change your existing app or article list.
+
+FILES TO ADD TO THE ROOT OF YOUR EXISTING GITHUB REPOSITORY:
+  publish_daily.py
+
+FILE TO ADD IN A NESTED FOLDER:
+  .github/workflows/daily-reading-edit.yml
+
+Do not upload the ZIP itself. GitHub needs the .yml file at exactly that path.
+
+REQUIRED SETUP:
+1. Create an OpenAI API account and API key (separate billing from ChatGPT Plus).
+2. GitHub repository > Settings > Secrets and variables > Actions > New repository secret.
+   Name: OPENAI_API_KEY
+   Value: your API key (never put it in a public file or chat).
+3. GitHub > Actions > Publish daily Reading Edit > Run workflow to test.
+4. Inspect logs and confirm articles.json changed and Netlify deployed.
+
+HOW IT WORKS:
+- GitHub runs the job at 07:00 and 08:00 UTC, publishing only when it is
+  08:00 Europe/London (accounts for daylight saving time).
+- The AI uses web search to seek 3–5 exceptionally good articles.
+- It excludes previously published URLs, checks that links are reachable,
+  appends articles to articles.json and commits it to GitHub.
+- Netlify redeploys automatically; your app reads articles.json.
+- The existing app keeps Saved/Read/Favourites in the browser on that device.
+
+LIMITATIONS:
+- This is a separate AI workflow, not the ChatGPT scheduled task.
+- OpenAI API and web search may incur charges; set usage limits in API billing.
+- AI editorial judgement and URL verification are imperfect. Reachability
+  checks do not prove the article title/date are correct or paywall-free.
+- GitHub scheduled jobs can run late; exact 08:00 delivery isn't guaranteed.
+- If API billing fails or no good articles are found, existing articles remain.
+- Never replace index.html or erase articles.json while installing this.
+- Local Safari data can still be cleared; use app's Export library feature.
