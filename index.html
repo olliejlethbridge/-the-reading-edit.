@@ -41,6 +41,22 @@ for(const a of initial){if(!state.articles.some(x=>x.id===a.id))state.articles.p
 let tab="today";const $=s=>document.querySelector(s);
 function persist(){localStorage.setItem(KEY,JSON.stringify(state))}
 persist();
+// Fetch published recommendations; merge by ID without touching personal reading status.
+async function refreshArticles(){
+ try {
+  const response=await fetch('./articles.json',{cache:'no-store'});
+  if(!response.ok)throw new Error('Could not load recommendations');
+  const incoming=await response.json();
+  if(!Array.isArray(incoming))throw new Error('Invalid article feed');
+  for(const a of incoming){
+   if(!a || typeof a.id!=='string' || typeof a.title!=='string' || typeof a.url!=='string')continue;
+   const index=state.articles.findIndex(old=>old.id===a.id);
+   if(index===-1)state.articles.unshift(a);
+   else state.articles[index]={...state.articles[index],...a};
+  }
+  persist();render();
+ }catch(error){console.warn('Using offline reading collection:',error)}
+}
 function safe(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function validUrl(u){try{const p=new URL(u);return ["https:","http:"].includes(p.protocol)?p.href:"#"}catch(e){return "#"}}
 function status(id){return state.status[id]||(state.status[id]={saved:false,read:false,favourite:false})}
@@ -59,5 +75,5 @@ if(b.dataset.action){const s=status(b.dataset.id),a=b.dataset.action;s[a]=!s[a];
 $("#export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="reading-edit-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
 let importMode="library";$("#import").onclick=()=>{importMode="library";$("#file").click()};$("#add").onclick=()=>{importMode="articles";$("#file").click()};
 $("#file").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(importMode==="library"){if(!Array.isArray(v.articles)||typeof v.status!=="object")throw Error("Invalid backup");state=v;for(const a of initial)if(!state.articles.some(x=>x.id===a.id))state.articles.push(a)}else{const items=Array.isArray(v)?v:v.articles;if(!Array.isArray(items)||items.some(a=>!a.id||!a.title||!a.url))throw Error("Invalid article list");for(const a of items){const i=state.articles.findIndex(x=>x.id===a.id);if(i>=0)state.articles[i]=a;else state.articles.push(a)}}persist();render();toast("Imported successfully")}catch(err){alert("Could not import: "+err.message)}e.target.value=""};
-render();
+render();refreshArticles();
 </script></body></html>

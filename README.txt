@@ -1,28 +1,17 @@
-THE READING EDIT — FIRST VERSION
+THE READING EDIT — LIVE FEED UPDATE
 
-WHAT WORKS
-- Mobile-friendly reading list with real tappable Save, Read and Favourite buttons.
-- Four collections: The Edit, Saved, Read, Favourites.
-- Selections persist using browser localStorage on the same device/browser.
-- Export and import your library as a JSON backup.
-- Import additional articles from a JSON file (see articles.json).
+Upload index.html and articles.json to the ROOT of the existing GitHub repository.
+Netlify will deploy automatically if linked to the main branch.
 
-HOW TO PUT IT ON YOUR IPHONE
-1. Upload index.html to a static web host such as Netlify Drop or GitHub Pages.
-2. Open the resulting HTTPS address in Safari on your iPhone.
-3. Tap Share > Add to Home Screen.
+The app now fetches articles.json on opening and merges new articles by stable id.
+Existing Save / Read / Favourite status is preserved in localStorage on the SAME origin/device.
+Do not change the Netlify website address or clear browser data.
 
-IMPORTANT LIMITATIONS
-- The library is local to the browser/device; it does not sync across devices.
-- Clearing Safari site data can erase it; export backups.
-- The existing ChatGPT daily automation does NOT publish into this app yet.
-- Articles included are the four foundational recommendations discussed in chat; their external links may change.
-- The app is not yet hosted or connected to a database.
+To publish more articles, edit articles.json in GitHub. Use unique stable IDs.
+Each item needs id, title, publication, date, minutes, description, url.
 
-JSON ARTICLE FORMAT
-An array of objects with fields:
-id, title, publication, date, minutes, description, url.
-Use the 'Add articles (JSON)' control to import.
+IMPORTANT: This is NOT an automated article researcher or publisher. The 8am ChatGPT
+reading automation does not currently write to GitHub. A separate publisher workflow
+must be built to make editions appear without manual editing.
 
-FUTURE VERSION
-Connect an automated publishing feed and cloud storage so new articles appear daily and your library syncs across devices.
+Your browser reading data is not synced to GitHub. Export backups in the app.
