@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f4ee"><meta name="apple-mobile-web-app-capable" content="yes"><title>The Reading Edit</title>
+<style>
+:root{--ink:#252a26;--muted:#72776e;--cream:#f7f4ee;--paper:#fffefb;--line:#dedbd2;--green:#294b3b;--gold:#9c7541}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font-family:Georgia,"Times New Roman",serif}
+.shell{max-width:780px;margin:auto;padding:34px 20px 100px}.eyebrow{font:600 10px/1.4 system-ui;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+h1{font-size:clamp(38px,8vw,62px);letter-spacing:-.055em;font-weight:400;margin:12px 0 6px}.intro{color:var(--muted);font-size:16px;line-height:1.5;margin:0 0 26px}
+.rule{height:1px;background:var(--line);margin:18px 0}.tabs{display:flex;gap:6px;overflow:auto;padding:8px 0 20px;position:sticky;top:0;background:var(--cream);z-index:3}
+.tab{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:99px;padding:11px 14px;white-space:nowrap;font:600 12px system-ui;cursor:pointer}
+.tab.active{background:var(--green);color:white;border-color:var(--green)}.tab span{opacity:.7;margin-left:4px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:25px 24px;margin-bottom:13px;box-shadow:0 3px 15px #302d2208}
+.meta{font:600 10px/1.5 system-ui;letter-spacing:.11em;text-transform:uppercase;color:var(--gold)}h2{font-weight:400;font-size:29px;line-height:1.12;letter-spacing:-.035em;margin:12px 0}
+.desc{font-size:15px;line-height:1.65;color:#5d625a;margin:0 0 20px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.readlink{font:600 12px system-ui;border:1px solid var(--line);border-radius:3px;padding:11px 13px;background:white;color:var(--ink);cursor:pointer;text-decoration:none;display:inline-block}
+.readlink{background:var(--green);border-color:var(--green);color:white}.active-action{background:#f0e6d5;border-color:#c3a475;color:#6d4d1d}
+.empty{padding:55px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line);line-height:1.6}
+footer{margin-top:38px;color:var(--muted);font:12px/1.7 system-ui}.utility{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.utility button{font-size:11px;padding:9px}.hidden{display:none}input[type=file]{display:none}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--green);color:white;font:12px system-ui;padding:12px 18px;border-radius:5px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}.toast.show{opacity:1}
+@media(max-width:450px){.shell{padding:25px 14px 95px}.card{padding:21px 18px}h2{font-size:26px}.actions button,.readlink{padding:11px}}
+</style></head><body><main class="shell">
+<div class="eyebrow">A private collection of exceptional writing</div><h1>The Reading Edit<span style="color:var(--gold)">.</span></h1>
+<p class="intro">Extraordinary lives. Forgotten worlds. Stories worth keeping.</p><div class="rule"></div>
+<nav class="tabs" aria-label="Reading collections">
+<button class="tab active" data-tab="today">The Edit <span id="count-today"></span></button>
+<button class="tab" data-tab="saved">Saved <span id="count-saved"></span></button>
+<button class="tab" data-tab="read">Read <span id="count-read"></span></button>
+<button class="tab" data-tab="favourites">★ Favourites <span id="count-favourites"></span></button>
+</nav><div id="list"></div>
+<footer><strong>Your reading library</strong><br>Changes are saved automatically in this browser on this device. Export a backup before clearing browser data or moving phones. Daily recommendations from ChatGPT are not yet connected automatically.
+<div class="utility"><button id="export">Export library</button><button id="import">Import library</button><button id="add">Add articles (JSON)</button><input id="file" type="file" accept=".json,application/json"></div>
+</footer></main><div class="toast" id="toast" role="status"></div>
+<script>
+const initial=[{"id": "agnelli-rules", "title": "Agnelli: The Rules of the Game", "publication": "Vanity Fair", "date": "July 1991", "minutes": 15, "description": "The Agnelli dynasty, Fiat, power, wealth and the captivating world of Italy's most glamorous industrial family.", "url": "https://www.vanityfair.com/style/1991/07/gianni-marella-agnelli-fiat"}, {"id": "la-vita-agnelli", "title": "La Vita Agnelli", "publication": "Vanity Fair", "date": "May 2003", "minutes": 15, "description": "Gianni Agnelli's remarkable life, his family, his influence and the extraordinary world he inhabited.", "url": "https://www.vanityfair.com/news/2003/05/gianni-agnelli-200305"}, {"id": "rubirosa", "title": "The Gentleman Icon: Porfirio Rubirosa", "publication": "Gentleman's Journal", "date": "Archive", "minutes": 7, "description": "The Dominican diplomat and legendary international playboy at the heart of the mid-century jet set.", "url": "https://www.thegentlemansjournal.com/article/porfirio-rubirosa-2/"}, {"id": "onassis-yacht", "title": "The Good Life Aquatic", "publication": "Vanity Fair", "date": "2005", "minutes": 12, "description": "Aristotle Onassis's yacht Christina O and the fascinating guests and intrigues of its glamorous heyday.", "url": "https://archive.vanityfair.com/article/share/529d107c-8b4e-4552-944e-754e7491a5c2"}];
+const KEY="reading-edit-v1";let state;
+try{state=JSON.parse(localStorage.getItem(KEY))||{articles:[],status:{}}}catch(e){state={articles:[],status:{}}}
+if(!Array.isArray(state.articles))state.articles=[];
+if(!state.status||typeof state.status!=="object")state.status={};
+for(const a of initial){if(!state.articles.some(x=>x.id===a.id))state.articles.push(a)}
+let tab="today";const $=s=>document.querySelector(s);
+function persist(){localStorage.setItem(KEY,JSON.stringify(state))}
+persist();
+function safe(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function validUrl(u){try{const p=new URL(u);return ["https:","http:"].includes(p.protocol)?p.href:"#"}catch(e){return "#"}}
+function status(id){return state.status[id]||(state.status[id]={saved:false,read:false,favourite:false})}
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),1900)}
+function render(){
+ const counts={today:state.articles.filter(a=>!status(a.id).read).length,saved:state.articles.filter(a=>status(a.id).saved).length,read:state.articles.filter(a=>status(a.id).read).length,favourites:state.articles.filter(a=>status(a.id).favourite).length};
+ for(const k of Object.keys(counts))$("#count-"+k).textContent=counts[k];
+ document.querySelectorAll("[data-tab]").forEach(b=>{b.classList.toggle("active",b.dataset.tab===tab);b.setAttribute("aria-selected",String(b.dataset.tab===tab))});
+ const arr=state.articles.filter(a=>tab==="today"?!status(a.id).read:tab==="saved"?status(a.id).saved:tab==="read"?status(a.id).read:status(a.id).favourite);
+ $("#list").innerHTML=arr.length?arr.map(a=>{const s=status(a.id);return `<article class="card"><div class="meta">${safe(a.publication)} · ${safe(a.date)} · ${safe(a.minutes||"—")} min read</div><h2>${safe(a.title)}</h2><p class="desc">${safe(a.description)}</p><div class="actions"><a class="readlink" href="${safe(validUrl(a.url))}" target="_blank" rel="noopener noreferrer">Read article ↗</a><button data-action="saved" data-id="${safe(a.id)}" class="${s.saved?"active-action":""}" aria-pressed="${s.saved}">${s.saved?"✓ Saved":"+ Save"}</button><button data-action="read" data-id="${safe(a.id)}" class="${s.read?"active-action":""}" aria-pressed="${s.read}">${s.read?"✓ Read":"Mark read"}</button><button data-action="favourite" data-id="${safe(a.id)}" class="${s.favourite?"active-action":""}" aria-pressed="${s.favourite}">${s.favourite?"★ Favourited":"☆ Favourite"}</button></div></article>`}).join(""):`<div class="empty">${tab==="saved"?"Your saved articles will appear here.":tab==="read"?"Articles you've finished will appear here.":tab==="favourites"?"Your favourite reads will appear here.":"You've finished everything in this edition."}</div>`;
+}
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+if(b.dataset.tab){tab=b.dataset.tab;render();return}
+if(b.dataset.action){const s=status(b.dataset.id),a=b.dataset.action;s[a]=!s[a];if(a==="read"&&s.read)s.saved=false;if(a==="saved"&&s.saved)s.read=false;if(a==="favourite"&&s.favourite){s.read=true;s.saved=false}persist();render();toast(a==="favourite"?"Favourites updated":a==="read"?"Reading history updated":"Saved articles updated")}}
+);
+$("#export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="reading-edit-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+let importMode="library";$("#import").onclick=()=>{importMode="library";$("#file").click()};$("#add").onclick=()=>{importMode="articles";$("#file").click()};
+$("#file").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(importMode==="library"){if(!Array.isArray(v.articles)||typeof v.status!=="object")throw Error("Invalid backup");state=v;for(const a of initial)if(!state.articles.some(x=>x.id===a.id))state.articles.push(a)}else{const items=Array.isArray(v)?v:v.articles;if(!Array.isArray(items)||items.some(a=>!a.id||!a.title||!a.url))throw Error("Invalid article list");for(const a of items){const i=state.articles.findIndex(x=>x.id===a.id);if(i>=0)state.articles[i]=a;else state.articles.push(a)}}persist();render();toast("Imported successfully")}catch(err){alert("Could not import: "+err.message)}e.target.value=""};
+render();
+</script></body></html>
