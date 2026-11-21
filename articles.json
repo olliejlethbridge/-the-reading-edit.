@@ -43,5 +43,35 @@
     "minutes": 9,
     "description": "The dazzling society figure, wit and diplomat's wife whose circle included Churchill, Cecil Beaton and Evelyn Waugh.",
     "url": "https://www.theoldie.co.uk/blog/lady-diana-cooper-forty-years-since-her-death"
+  },
+  {
+    "title": "The Legend of Rubirosa",
+    "publication": "Vanity Fair",
+    "date": "May 2002 (archived)",
+    "description": "A spirited, richly sourced long profile that reconstructs the life of Porfirio Rubirosa — polo player, diplomat, racing driver and legendary jet‑set lover — weaving scandal, Trujillo’s politics and Rubi’s celebrity into a vivid portrait of mid‑century high society. The piece captures both his glamorous conquests and the darker ties to Dominican power with anecdote‑driven narrative and archival reporting.",
+    "url": "https://www.vanityfair.com/news/2002/11/porfirio-rubirosa-200211",
+    "minutes": 30,
+    "id": "daily-20261121-1",
+    "added_on": "2026-11-21"
+  },
+  {
+    "title": "Potemkin Playboys",
+    "publication": "Vanity Fair",
+    "date": "June 2, 2011",
+    "description": "A polished, elegiac essay on the passing of Gunter Sachs and the end of a particular European playboy era, mixing biography, social history and stylish reportage to examine Sachs’s marriages, art ambitions and his role as a mid‑century icon of leisure and taste. The piece is narrative‑forward and rich in atmosphere, situating Sachs among the jet‑set circuits of St. Moritz, Saint‑Tropez and Gstaad.",
+    "url": "https://www.vanityfair.com/magazine/2011/07/graydon-201107",
+    "minutes": 25,
+    "id": "daily-20261121-2",
+    "added_on": "2026-11-21"
+  },
+  {
+    "title": "A Delicate Balance",
+    "publication": "Vanity Fair",
+    "date": "May 2016 (archived)",
+    "description": "A long, textured look at Aristotle Onassis’s private life and public marriages that balances his business empire, famed romances (including Maria Callas and Jacqueline Kennedy) and the personal dramas that shaped his legacy; the piece draws on memoirs and contemporary reporting to render Onassis as both a titan of shipping and an architect of modern high society mythology. It’s narrative‑rich and attentive to character detail and historical context.",
+    "url": "https://archive.vanityfair.com/article/share/785ef31c-b98f-4a7e-8032-44a6f42df458",
+    "minutes": 35,
+    "id": "daily-20261121-3",
+    "added_on": "2026-11-21"
   }
 ]
