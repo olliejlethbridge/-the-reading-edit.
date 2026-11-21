@@ -45,13 +45,27 @@ def main():
         raise RuntimeError('OPENAI_API_KEY GitHub Actions secret is missing')
     prompt = f'''Today is {TODAY.date().isoformat()}. You are the exceptionally discerning editor of The Reading Edit, a private reading collection. Use web search to find 3–5 REAL, existing, directly linked outstanding LONG-FORM articles. Core subjects: Gianni Agnelli, Aristotle Onassis, Gunter Sachs, Porfirio Rubirosa, Aly Khan, European jet set, colourful aristocrats, extraordinary adventurers, vanished high society, great dynasties and scandals. Prioritise superb narrative and genuinely fascinating lives, especially outstanding Vanity Fair archives, The Oldie, The Spectator, Gentleman's Journal and other excellent magazines. Exclude modern hospitality founders, generic luxury, product reviews, fashion, routine politics, promotional pieces, or flimsy biographies. Better to return 1 truly superb article than 5 mediocre ones. NEVER fabricate article titles, URLs, dates or details. Open or verify each article using search before including. Exclude these already recommended URLs: {json.dumps(sorted(known))}. Return ONLY a JSON array, each item with title, publication, date, minutes (estimated integer), description (1–2 vivid accurate sentences), url (direct HTTPS article URL). No markdown. If none meet the bar return [].'''
     payload = {'model': os.getenv('OPENAI_MODEL','gpt-5-mini'), 'tools':[{'type':'web_search'}],
-               'input': prompt, 'max_output_tokens': 2500}
+               'input': prompt, 'reasoning': {'effort': 'low'}, 'max_output_tokens': 9000}
     response = get_json('https://api.openai.com/v1/responses', payload, key)
     text = ''.join(x.get('text','') for item in response.get('output',[])
                    if item.get('type') == 'message' for x in item.get('content',[])
                    if x.get('type') == 'output_text').strip()
+    if not text:
+        details = {'status': response.get('status'),
+                   'incomplete_details': response.get('incomplete_details'),
+                   'output_types': [item.get('type') for item in response.get('output', [])],
+                   'usage': response.get('usage')}
+        print('OpenAI returned no article text:', json.dumps(details), file=sys.stderr)
+        raise RuntimeError('OpenAI returned no article text; no articles were changed. ' 
+                           'The response may have exhausted its output-token budget.')
     text = re.sub(r'^```(?:json)?\s*|\s*```$', '', text).strip()
-    candidates = json.loads(text)
+    try:
+        candidates = json.loads(text)
+    except json.JSONDecodeError as exc:
+        print('OpenAI response status:', response.get('status'),
+              'incomplete_details:', response.get('incomplete_details'), file=sys.stderr)
+        print('Response excerpt:', repr(text[:350]), file=sys.stderr)
+        raise RuntimeError('OpenAI did not return valid JSON; existing articles are unchanged') from exc
     if not isinstance(candidates, list):
         raise ValueError('Expected JSON list')
     additions = []
