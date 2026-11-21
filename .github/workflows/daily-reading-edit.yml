@@ -1,0 +1,43 @@
+name: Publish daily Reading Edit
+
+on:
+  schedule:
+    # Run at 07:00 and 08:00 UTC; script picks 08:00 Europe/London.
+    - cron: '0 7,8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reading-edit-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Research and publish articles
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-5-mini
+        run: python publish_daily.py
+
+      - name: Commit new edition
+        run: |
+          if ! git diff --quiet -- articles.json; then
+            git config user.name 'reading-edit-bot'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add articles.json
+            git commit -m "Publish daily Reading Edit"
+            git push
+          else
+            echo 'No new articles to publish'
+          fi
