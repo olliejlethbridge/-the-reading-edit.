@@ -73,5 +73,38 @@
     "minutes": 35,
     "id": "daily-20261121-3",
     "added_on": "2026-11-21"
+  },
+  {
+    "id": "daily-20261122-1",
+    "title": "The Legend of Peter Beard",
+    "publication": "Vanity Fair",
+    "date": "September 2020",
+    "minutes": 19,
+    "description": "Photographer, Kenyan wilderness adventurer and notorious society wild man: an extraordinary life spent between African game trails and New York's most glamorous parties.",
+    "url": "https://www.vanityfair.com/style/2020/09/the-legend-of-peter-beard",
+    "subject": "Peter Beard",
+    "added_on": "2026-11-22"
+  },
+  {
+    "id": "daily-20261122-2",
+    "title": "Robert Capa's Longest Day",
+    "publication": "Vanity Fair",
+    "date": "June 2014",
+    "minutes": 24,
+    "description": "The swaggering, romantic war photographer lands at Omaha Beach on D-Day, producing eleven surviving photographs and one of journalism's most extraordinary stories.",
+    "url": "https://www.vanityfair.com/culture/2014/06/photographer-robert-capa-d-day",
+    "subject": "Robert Capa",
+    "added_on": "2026-11-22"
+  },
+  {
+    "id": "daily-20261122-3",
+    "title": "The Last Queen of Paris",
+    "publication": "Vanity Fair",
+    "date": "September 2010",
+    "minutes": 24,
+    "description": "The mysterious French countess at the heart of postwar high society recalls outrageous masked balls, Diana Vreeland, Cecil Beaton and a lifetime of immaculate reinvention.",
+    "url": "https://www.vanityfair.com/news/2010/09/jacqueline-deribes-201009",
+    "subject": "Jacqueline de Ribes",
+    "added_on": "2026-11-22"
   }
 ]
