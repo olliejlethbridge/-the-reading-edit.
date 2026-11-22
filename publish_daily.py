@@ -1,14 +1,14 @@
-"""The Reading Edit: the charismatic, outrageous, adventurous, impossibly cool.
+"""The Reading Edit — character-first, duplicate-safe daily publisher.
 
-Reads existing articles.json and keeps every entry unchanged. A failed API call,
-invalid result or empty selection never overwrites the reading library.
-Requires the OPENAI_API_KEY GitHub Actions repository secret.
+Uses the OpenAI Responses API with web search. Appends to articles.json;
+never rewrites or removes an existing article. Library selections remain in the app.
+Requires the GitHub Actions secret OPENAI_API_KEY.
 """
-
 import json
 import os
 import re
 import sys
+import unicodedata
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -17,249 +17,67 @@ from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 from zoneinfo import ZoneInfo
 
-ROOT = Path(__file__).resolve().parent
-FEED = ROOT / "articles.json"
+FEED = Path(__file__).resolve().parent / "articles.json"
 NOW = datetime.now(ZoneInfo("Europe/London"))
 
-# These are deliberately broad: no one personality should dominate successive
-# editions, even if different publications have written about them.
-SUBJECT_ALIASES = {
-    "gianni agnelli": ["agnelli", "l'avvocato"],
-    "aristotle onassis": ["onassis", "christina o"],
-    "porfirio rubirosa": ["rubirosa"],
-    "gunter sachs": ["gunter sachs", "günter sachs"],
-    "aly khan": ["aly khan", "ali khan"],
-    "lady diana cooper": ["diana cooper", "lady diana manners"],
-    "cecil beaton": ["cecil beaton"],
-    "mitford sisters": ["mitford", "nancy mitford", "diana mosley", "deborah devonshire"],
-    "wallis simpson": ["wallis simpson", "duchess of windsor"],
-    "barbara hutton": ["barbara hutton"],
-    "princess margaret": ["princess margaret"],
-    "gloria guinness": ["gloria guinness"],
-    "rita hayworth": ["rita hayworth"],
-    # Different Kennedys should be eligible in different editions; a whole
-    # dynasty is not a single person for editorial rotation.
-    "john f. kennedy": ["john f. kennedy", "john f kennedy", "jfk"],
-    "robert f. kennedy": ["robert f. kennedy", "robert f kennedy", "rfk"],
-    "jacqueline kennedy": ["jackie kennedy", "jacqueline kennedy", "jackie onassis"],
-    "kathleen kennedy": ["kick kennedy", "kathleen kennedy"],
-    "rosemary kennedy": ["rosemary kennedy"],
-    "joseph kennedy": ["joe kennedy", "joseph kennedy"],
-    "edward kennedy": ["ted kennedy", "edward kennedy"],
-    "kennedy family": ["kennedys", "the kennedys", "kennedy family", "kennedy dynasty"],
-    "rockefeller family": ["rockefeller", "rockefellers"],
-    "vanderbilt family": ["vanderbilt", "vanderbilts"],
-    "astor family": ["astor family", "the astors", "astor dynasty"],
-    "bouvier family": ["bouvier", "bouviers"],
-    "truman capote": ["truman capote", "capote"],
-    "babe paley": ["babe paley"],
-    "doris duke": ["doris duke"],
-    "william randolph hearst": ["william randolph hearst"],
-}
 
-
-
-def request_json(url, payload, api_key):
-    request = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-        method="POST",
-    )
-    with urllib.request.urlopen(request, timeout=180) as response:
-        return json.load(response)
-
-
-def clean_url(value):
-    """Normalize obvious tracking/formatting differences for duplicate checks."""
+def norm_url(value):
     try:
-        parts = urlsplit(str(value).strip())
-        if parts.scheme.lower() != "https" or not parts.hostname:
+        p = urlsplit(str(value).strip())
+        if p.scheme.lower() != "https" or not p.hostname:
             return ""
-        domain = parts.hostname.lower().removeprefix("www.")
-        path = re.sub(r"/+", "/", parts.path).rstrip("/")
-        return urlunsplit(("https", domain, path, "", ""))
-    except ValueError:
+        host = p.hostname.lower().removeprefix("www.")
+        path = re.sub(r"/+", "/", p.path).rstrip("/")
+        return urlunsplit(("https", host, path, "", ""))
+    except (ValueError, TypeError):
         return ""
 
 
-def tidy_title(value):
-    return re.sub(r"[^a-z0-9]+", " ", str(value).casefold()).strip()
+def norm_title(value):
+    return re.sub(r"[^a-z0-9]+", " ", str(value).lower()).strip()
 
 
-def identify_subject(article):
-    provided = str(article.get("subject", "")).strip().casefold()
-    if provided:
-        for subject, aliases in SUBJECT_ALIASES.items():
-            if provided == subject or provided in aliases:
-                return subject
-        return provided
-    body = f"{article.get('title', '')} {article.get('description', '')}".casefold()
-    for subject, aliases in SUBJECT_ALIASES.items():
-        if any(alias in body for alias in aliases):
-            return subject
-    return ""
+def norm_person(value):
+    simple = unicodedata.normalize("NFKD", str(value).casefold())
+    simple = "".join(c for c in simple if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", " ", simple).strip()
 
 
-def readable(url):
-    if not clean_url(url):
+def person_key(article):
+    """Recognise the founding personalities even in old records with no subject field."""
+    aliases = {
+        "gianni agnelli": ("agnelli",),
+        "porfirio rubirosa": ("rubirosa",),
+        "aristotle onassis": ("onassis", "christina o"),
+        "gunter sachs": ("gunter sachs", "potemkin playboys"),
+        "lady diana cooper": ("diana cooper",),
+    }
+    raw = norm_person(article.get("subject") or "")
+    body = norm_person(" ".join(str(article.get(k, "")) for k in ("title", "description")))
+    for canonical, variants in aliases.items():
+        if any(v in raw for v in variants) or any(v in body for v in variants):
+            return canonical
+    return raw
+
+
+def reachable(url):
+    """Check an actual HTML article page; never invent a working URL."""
+    if not norm_url(url):
         return False
     try:
-        request = urllib.request.Request(
-            url,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; ReadingEdit/1.0)"},
-        )
-        with urllib.request.urlopen(request, timeout=18) as response:
-            return (
-                response.status == 200
-                and "text/html" in response.headers.get("Content-Type", "text/html")
-            )
-    except (urllib.error.URLError, TimeoutError, ValueError):
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Mozilla/5.0 (compatible; ReadingEdit/1.0)",
+                          "Accept": "text/html,application/xhtml+xml"})
+        with urllib.request.urlopen(req, timeout=18) as res:
+            return (200 <= res.status < 300 and
+                    "html" in res.headers.get("Content-Type", "text/html").lower())
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError):
         return False
 
 
-def extract_articles(api_response):
-    """Avoid overwriting the feed when a model response is empty/incomplete."""
-    chunks = []
-    for item in api_response.get("output", []):
-        if item.get("type") == "message":
-            for content in item.get("content", []):
-                if content.get("type") == "output_text":
-                    chunks.append(content.get("text", ""))
-    raw = "".join(chunks).strip()
-    if not raw:
-        print(
-            "No article text from API:",
-            json.dumps({
-                "status": api_response.get("status"),
-                "incomplete_details": api_response.get("incomplete_details"),
-            }),
-            file=sys.stderr,
-        )
-        return []
-    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw).strip()
-    try:
-        result = json.loads(raw)
-    except json.JSONDecodeError:
-        print("API returned invalid JSON; existing feed is untouched", file=sys.stderr)
-        return []
-    if isinstance(result, dict):
-        result = result.get("articles", [])
-    return result if isinstance(result, list) else []
-
-
-def main():
-    # Schedule has 07:00 & 08:00 UTC triggers for BST/GMT. A GitHub runner
-    # can start late; permit late runs but never start before 08:00 London.
-    if os.getenv("GITHUB_EVENT_NAME") == "schedule" and NOW.hour < 8:
-        print("Before 08:00 London time; skipping")
-        return
-
-    existing = json.loads(FEED.read_text(encoding="utf-8"))
-    if not isinstance(existing, list):
-        raise ValueError("articles.json must be a JSON array")
-    if any(item.get("added_on") == NOW.date().isoformat() for item in existing):
-        print("Already published today; skipping")
-        return
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is missing from GitHub Actions secrets")
-
-    known_urls = {clean_url(a.get("url", "")) for a in existing}
-    known_titles = {tidy_title(a.get("title", "")) for a in existing}
-    recent_articles = existing[-12:]
-    recent_subjects = {identify_subject(a) for a in recent_articles} - {""}
-
-    # Rotate discovery angles to uncover people we have never heard of, not
-    # another article about yesterday's headline personality.
-    discovery_angles = [
-        "magnetic rogues, irresistible charmers and playboys or playgirls who lived outrageously",
-        "daring explorers, spies and adventurers with swagger, wit and improbably good stories",
-        "stylish outsiders, fascinating eccentrics and iconoclastic artists or filmmakers",
-        "charismatic American figures, larger-than-life Kennedys, glamorous troublemakers and Hollywood originals",
-        "audacious aristocrats, jet-set icons, legendary hosts and people with unforgettable circles of friends",
-        "beautifully written portraits of bohemians, daring aviators, gamblers and adventurous women",
-        "people history nearly forgot: magnetic rebels, fearless travellers and extravagant personalities",
-    ]
-    lens = discovery_angles[NOW.toordinal() % len(discovery_angles)]
-    history = [{"title": a.get("title", ""), "url": a.get("url", "")}
-               for a in existing]
-
-    prompt = f"""You are editor-in-chief of THE READING EDIT, a deeply selective
-    personal reading collection about THE COOLEST, MOST CHARISMATIC,
-    OUTRAGEOUS AND FASCINATING REAL PEOPLE who ever lived.
-    Today is {NOW.date().isoformat()}.
-
-    THIS IS NOT A HISTORY LESSON AND NOT A COLLECTION OF 'IMPORTANT PEOPLE'.
-    The PERSON must be the draw: someone with real charm, swagger, wit,
-    magnetism, bravado, a surprising personality or a wildly unconventional
-    life. Fascinating company: someone you would give anything to have dinner
-    with just to hear their stories. Search for lives full of deliciously
-    unlikely adventures, glamorous friendships, remarkable romance,
-    breathtaking risks, reckless decisions, absurd anecdotes, intrigue,
-    astonishing talent or scandal. We like flair, individuality, style,
-    charisma and people who lived on their own terms. Not all characters
-    need to be glamorous, rich, admirable or even likeable.
-
-    GIANNI AGNELLI, GUNTER SACHS, PORFIRIO RUBIROSA and ALY KHAN explain
-    the *spirit*, NOT a shortlist to repeat. Other useful directions:
-    a particularly compelling Kennedy, an unconventional American heiress,
-    a daredevil, an irresistible Hollywood rogue, a British eccentric, a
-    witty spy, a legendary photographer, an explorer with incredible personal
-    adventures, an extraordinary woman, a flamboyant artist, a forgotten
-    international charmer. Lesser-known names are actively preferred if the
-    story is better. People can come from any country or period.
-
-    TODAY'S DISCOVERY ANGLE (a nudge, not a quota): {lens}.
-
-    HARD REJECTION TEST: Would this be exciting even if the person had no
-    famous surname or job title? Is there specific evidence from the article
-    of charisma, daring, coolness, delightful eccentricity or a thrillingly
-    unusual personality? Is this a GREAT STORY, full of scenes, detail and
-    narrative, rather than dry career milestones? If any answer is no,
-    reject it. Brilliant prose is equally essential. Strongly prefer
-    vivid long-form profiles and archival narrative journalism, roughly
-    15-40 minutes where available. Two genuinely terrific articles beat five
-    merely competent ones. Sometimes one is enough. Do not chase quotas.
-
-    Search Vanity Fair's historic profiles, Esquire, The New Yorker,
-    The Paris Review, Smithsonian, The Atlantic, Tatler, Town & Country,
-    high-quality newspaper magazines, historical archives and other strong
-    long-form sources. Articles from any decade are eligible. Avoid boring
-    biographies, dry factual profiles, obituary roundups, generic wealth
-    articles, fashion/luxury shopping, contemporary hospitality founders,
-    clickbait, political updates, 'most influential' lists and trivia.
-    A renowned person is NOT necessarily an interesting person.
-
-    NEVER repeat an article already in this reading library, under any URL
-    variant, syndicated copy, updated headline or archive republication:
-    {json.dumps(history, ensure_ascii=False)}
-    RECENTLY COVERED SUBJECTS, GIVE THEM A REST:
-    {json.dumps(sorted(recent_subjects), ensure_ascii=False)}
-    Deliver DIFFERENT central characters today; don't publish several pieces
-    about the same person. Don't keep coming back to Agnelli or Rubirosa.
-
-    Browse using web_search, find the exact original article, and inspect
-    source pages before proposing. For each candidate, provide two brief,
-    SPECIFIC, ARTICLE-SUPPORTED reasons: 'magnetic_detail' identifies a
-    concrete action/anecdote/behaviour showing why the person is cool or
-    unusually charismatic; 'storytelling_detail' describes evidence that
-    the piece is gripping first-class narrative journalism. Do not invent
-    these to fill a quota. If the original text isn't accessible enough to
-    verify these details, reject the candidate. Check exact title, source,
-    date and original HTTPS link. When the date isn't confirmed, say
-    'Date not stated'; reading time must be a reasonable integer estimate.
-    The description should be vivid, specific, accurate and spoiler-light.
-
-    Return up to 8 STRONG candidate articles, ordered best-first, as
-    structured JSON. The script may reject inaccessible links and will
-    publish no more than 4. If quality is lacking, return fewer or none.
-    Every object must have: title, publication, date, minutes (integer),
-    description (1-2 detailed sentences), url, subject (person's full name),
-    magnetic_detail, storytelling_detail."""
-
-    article_properties = {
+def api_call(key, prompt):
+    """One web-grounded discovery pass. Requiring the tool prevents unsearched suggestions."""
+    fields = {
         "title": {"type": "string"},
         "publication": {"type": "string"},
         "date": {"type": "string"},
@@ -267,103 +85,186 @@ def main():
         "description": {"type": "string"},
         "url": {"type": "string"},
         "subject": {"type": "string"},
-        "magnetic_detail": {"type": "string"},
-        "storytelling_detail": {"type": "string"},
-    }
-    response_format = {
-        "type": "json_schema", "name": "reading_edit_candidates", "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {"articles": {"type": "array", "items": {
-                "type": "object", "properties": article_properties,
-                "required": list(article_properties), "additionalProperties": False,
-            }}},
-            "required": ["articles"], "additionalProperties": False,
-        },
     }
     payload = {
-        "model": os.getenv("OPENAI_MODEL", "gpt-5-mini"),
-        "tools": [{"type": "web_search"}],
+        "model": os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
+        "tools": [{"type": "web_search", "search_context_size": "medium"}],
+        "tool_choice": "required",
         "input": prompt,
         "reasoning": {"effort": "low"},
-        "max_output_tokens": 9500,
-        "text": {"format": response_format},
+        "max_output_tokens": 7000,
+        "text": {"format": {
+            "type": "json_schema", "name": "reading_edit_articles", "strict": True,
+            "schema": {"type": "object", "properties": {
+                "articles": {"type": "array", "items": {
+                    "type": "object", "properties": fields,
+                    "required": list(fields), "additionalProperties": False}}},
+                "required": ["articles"], "additionalProperties": False},
+        }},
     }
-    response = request_json("https://api.openai.com/v1/responses", payload, api_key)
-    candidates = extract_articles(response)
-    print(f"Research returned {len(candidates)} candidate article(s)", flush=True)
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=json.dumps(payload).encode("utf-8"), method="POST",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=210) as resp:
+            data = json.load(resp)
+    except urllib.error.HTTPError as exc:
+        # Never print auth header or full request.
+        print(f"OpenAI API HTTP {exc.code}: {exc.reason}", file=sys.stderr)
+        raise
+
+    output = data.get("output", [])
+    snippets = [c.get("text", "") for item in output if item.get("type") == "message"
+                for c in item.get("content", []) if c.get("type") == "output_text"]
+    raw = "".join(snippets).strip()
+    usage = data.get("usage", {})
+    print("API response status:", data.get("status"),
+          "; web searches:", sum(1 for x in output if x.get("type") == "web_search_call"),
+          "; output tokens:", usage.get("output_tokens"), flush=True)
+    if data.get("status") != "completed":
+        print("Incomplete details:", data.get("incomplete_details"), flush=True)
+    if not raw:
+        print("No readable JSON returned (output item types:",
+              [x.get("type") for x in output], ")", flush=True)
+        return []
+    try:
+        obj = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", raw))
+    except json.JSONDecodeError:
+        print("Invalid JSON returned; first 120 chars:", repr(raw[:120]), flush=True)
+        return []
+    return obj.get("articles", []) if isinstance(obj, dict) and isinstance(obj.get("articles"), list) else []
+
+
+def main():
+    # The workflow is scheduled for both 07:00 and 08:00 UTC for UK DST.
+    # Manual dispatch can run at any time.
+    if os.environ.get("GITHUB_EVENT_NAME") == "schedule" and NOW.hour < 8:
+        print("Scheduled before 08:00 in London; skipping", flush=True)
+        return
+
+    existing = json.loads(FEED.read_text(encoding="utf-8"))
+    if not isinstance(existing, list) or not all(isinstance(a, dict) for a in existing):
+        raise ValueError("articles.json must be a list of article objects")
+    day = NOW.date().isoformat()
+    if any(a.get("added_on") == day for a in existing):
+        print("Today's edition is already published; no changes", flush=True)
+        return
+
+    key = os.environ.get("OPENAI_API_KEY")
+    if not key:
+        raise RuntimeError("Missing OPENAI_API_KEY secret")
+
+    old_urls = {norm_url(a.get("url", "")) for a in existing}
+    old_titles = {norm_title(a.get("title", "")) for a in existing}
+    recent_people = {person_key(a) for a in existing[-8:]} - {""}
+    # Short, concrete discovery instructions. Keep nuanced editorial choices in
+    # the prompt, but don't demand that every page has an accessible full text.
+    historic_titles = [a.get("title", "") for a in existing]
+    scene = [
+        "forgotten magnetic adventurers, daring explorers and charismatic spies",
+        "stylish Hollywood rogues, magnetic artists, spectacular eccentrics",
+        "American originals, extraordinary Kennedys, captivating heiresses and socialites",
+        "witty British adventurers, international charmers, charismatic rebels",
+        "bold women, bohemian legends, eccentric aristocrats and outrageous characters",
+        "colourful jet-set personalities and larger-than-life historical figures",
+        "audacious gamblers, extraordinary photographers, aviators and wandering writers",
+    ][NOW.toordinal() % 7]
+
+    base = f"""Find outstanding EXISTING magazine profiles or beautifully reported narrative articles
+about extraordinarily COOL, CHARISMATIC, FASCINATING real personalities.
+We love people with swagger, charm, wit, daring, eccentricity, unlikely adventures,
+scandalous friends, outrageous lives and fascinating stories. Think the spirit of
+Agnelli, Rubirosa, Gunter Sachs, Aly Khan, Robert Capa, Peter Fleming or a magnetic
+Kennedy, NOT more of the same articles about these particular people.
+They may be women or men, admirable or flawed, world-famous or forgotten.
+We want to think: 'God, I wish I'd met this person.' Great prose and vivid scenes
+matter. Not generic luxury, lists, fashion, business advice, dry biography,
+news politics, generic celebrity news, or hospitality founders.
+For today, look especially for {scene}.
+Search Vanity Fair archives, Esquire, The New Yorker, Tatler, Town & Country,
+The Paris Review, Smithsonian, excellent newspapers and other quality archives.
+ARCHIVAL ARTICLES ARE ENCOURAGED. Choose diverse *central people*.
+Do NOT suggest any previously published titles: {json.dumps(historic_titles, ensure_ascii=False)}.
+Use web search and cite only genuine direct HTTPS ORIGINAL article pages you find.
+Return 5 to 8 promising articles in best-first order with a vivid, accurate
+1-2-sentence description; include original publication and date if known, otherwise
+'Date not stated'. Reading time is an estimate, in minutes.
+This is candidate DISCOVERY, not final approval: suggest a good range of strong
+possibilities rather than applying an impossible proof standard. Do not invent URLs.
+Return JSON matching the schema."""
+
+    candidates = api_call(key, base)
+    print("First discovery pass returned", len(candidates), "candidate(s)", flush=True)
+    # One bounded fallback, only if the source model found nothing at all.
+    # This costs an additional API call; it is not an unbounded retry loop.
     if not candidates:
-        print("::warning::No candidate articles found; nothing was published.")
+        fallback = ("Search the web for 5 to 8 real, compelling long-form personality "
+                    "profiles of eccentric adventurers, charismatic rogues, "
+                    "unforgettable American socialites, daring explorers or film legends. "
+                    "Favour beautiful narrative journalism, especially archival "
+                    "Vanity Fair, Esquire, New Yorker, Smithsonian and Tatler. "
+                    "Return genuine, directly linked articles, not generic lists. "
+                    f"Do not repeat these titles: {json.dumps(historic_titles, ensure_ascii=False)}. "
+                    "Use web search; return JSON matching the schema, with real URLs, "
+                    "dates or 'Date not stated', subject name and engaging summaries. "
+                    "These are suggestions for later validation, not a demand for "
+                    "conclusive proof of every anecdote before returning candidates.")
+        candidates = api_call(key, fallback)
+        print("Fallback discovery returned", len(candidates), "candidate(s)", flush=True)
 
-    additions = []
-    subjects_today = set()
-    for candidate in candidates[:12]:
-        if not isinstance(candidate, dict):
+    added = []
+    people_today = set()
+    for a in candidates[:10]:
+        if not isinstance(a, dict) or not all(a.get(f) for f in (
+                "title", "publication", "date", "description", "url", "subject")):
+            print("REJECT missing metadata", flush=True)
             continue
-        if not all(candidate.get(field) for field in (
-            "title", "publication", "date", "description", "url", "subject",
-            "magnetic_detail", "storytelling_detail"
-        )):
-            print("Skipping incomplete article")
+        title, url, person = norm_title(a["title"]), norm_url(a["url"]), person_key(a)
+        if not url or url in old_urls:
+            print("REJECT invalid/duplicate URL:", str(a["title"])[:90], flush=True)
             continue
-
-        # Require concrete editorial justifications, not automatic "great person"
-        # praise. Both fields are review notes, not app-facing text.
-        if (len(str(candidate["magnetic_detail"]).strip()) < 35
-                or len(str(candidate["storytelling_detail"]).strip()) < 30):
-            print("Skipping insufficiently justified personality/quality:",
-                  candidate["title"], flush=True)
+        if not title or any(SequenceMatcher(None, title, p).ratio() >= .88 for p in old_titles if p):
+            print("REJECT repeated title:", str(a["title"])[:90], flush=True)
             continue
-        url = str(candidate["url"]).strip()
-        canon = clean_url(url)
-        title = tidy_title(candidate["title"])
-        subject = identify_subject(candidate)
-        if not canon or canon in known_urls:
-            print("Skipping duplicate/invalid URL:", url)
+        if person and (person in recent_people or person in people_today):
+            print("REJECT repeated personality:", a["subject"], flush=True)
             continue
-        if not title or any(SequenceMatcher(None, title, previous).ratio() >= 0.88
-                            for previous in known_titles if previous):
-            print("Skipping repeated or near-duplicate title:", candidate["title"])
+        if not reachable(str(a["url"])):
+            print("REJECT inaccessible original article:", str(a["url"])[:140], flush=True)
             continue
-        if subject and (subject in recent_subjects or subject in subjects_today):
-            print("Skipping overused subject:", subject)
-            continue
-        if not readable(url):
-            print("Skipping unreachable article:", url)
-            continue
-
         try:
-            minutes = max(2, min(100, int(candidate["minutes"])))
-        except (ValueError, TypeError):
+            minutes = max(2, min(95, int(a.get("minutes", 15))))
+        except (TypeError, ValueError):
             minutes = 15
         article = {
-            "id": f"daily-{NOW:%Y%m%d}-{len(additions)+1}",
-            "title": str(candidate["title"]).strip(),
-            "publication": str(candidate["publication"]).strip(),
-            "date": str(candidate["date"]).strip(),
+            "id": f"daily-{NOW:%Y%m%d}-{len(added)+1}",
+            "title": str(a["title"]).strip(),
+            "publication": str(a["publication"]).strip(),
+            "date": str(a["date"]).strip(),
             "minutes": minutes,
-            "description": str(candidate["description"]).strip(),
-            "url": url,
-            "subject": str(candidate["subject"]).strip(),
-            "added_on": NOW.date().isoformat(),
+            "description": str(a["description"]).strip(),
+            "url": str(a["url"]).strip(),
+            "subject": str(a["subject"]).strip(),
+            "added_on": day,
         }
-        additions.append(article)
-        known_urls.add(canon)
-        known_titles.add(title)
-        if subject:
-            subjects_today.add(subject)
-        print("ACCEPTED:", article["title"], "—", url, flush=True)
-        if len(additions) == 4:
+        added.append(article)
+        old_urls.add(url)
+        old_titles.add(title)
+        people_today.add(person)
+        print("ACCEPT:", article["title"], "—", article["subject"], flush=True)
+        if len(added) == 4:
             break
 
-    if not additions:
-        print(f"::warning::No new articles published from {len(candidates)} candidate(s); "
-              "all were rejected or none was returned. Existing library unchanged.", flush=True)
-        return
-    # Append only. No published article or saved/read/favourite status is deleted.
-    FEED.write_text(json.dumps(existing + additions, ensure_ascii=False, indent=2) + "\n",
+    if not added:
+        # FAIL VISIBLY; otherwise GitHub shows green despite an empty edition.
+        raise RuntimeError(f"No articles published: {len(candidates)} candidates returned, "
+                           "none passed validation. Existing articles.json untouched.")
+
+    FEED.write_text(json.dumps(existing + added, ensure_ascii=False, indent=2) + "\n",
                     encoding="utf-8")
-    print(f"Published {len(additions)} carefully selected new articles", flush=True)
+    print(f"SUCCESS: appended {len(added)} articles (now {len(existing) + len(added)} total)", flush=True)
 
 
 if __name__ == "__main__":
