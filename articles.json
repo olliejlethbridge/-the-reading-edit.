@@ -106,5 +106,38 @@
     "url": "https://www.vanityfair.com/news/2010/09/jacqueline-deribes-201009",
     "subject": "Jacqueline de Ribes",
     "added_on": "2026-11-22"
+  },
+  {
+    "id": "daily-20261123-1",
+    "title": "A Short, Bumpy Ride with Steve McQueen",
+    "publication": "Esquire",
+    "date": "June 1967",
+    "minutes": 15,
+    "description": "A vintage encounter with Hollywood's king of cool, capturing the combustible star in the middle of his sixties fame rather than looking back from a safe distance.",
+    "url": "https://classic.esquire.com/article/1967/6/1/a-short-bumpy-ride-with-steve-mcqueen",
+    "subject": "Steve McQueen",
+    "added_on": "2026-11-23"
+  },
+  {
+    "id": "daily-20261123-2",
+    "title": "The Wild Life and Many Loves of Ava Gardner",
+    "publication": "Vanity Fair",
+    "date": "June 2020",
+    "minutes": 17,
+    "description": "A fiercely independent movie star with legendary allure, tempestuous romances and a gift for turning the most improbable evenings into Hollywood folklore.",
+    "url": "https://www.vanityfair.com/hollywood/2020/06/ava-gardner-biography-frank-sinatra",
+    "subject": "Ava Gardner",
+    "added_on": "2026-11-23"
+  },
+  {
+    "id": "daily-20261123-3",
+    "title": "Mad, Bad, and Dangerous to Know: The Mythical Life of Errol Flynn",
+    "publication": "Vanity Fair",
+    "date": "April 2021",
+    "minutes": 18,
+    "description": "A rakish screen legend who made his own life almost as wildly improbable as his swashbuckling films, leaving a trail of scandal and self-mythology.",
+    "url": "https://www.vanityfair.com/hollywood/2021/04/errol-flynn-autobiography-wicked-wicked-ways",
+    "subject": "Errol Flynn",
+    "added_on": "2026-11-23"
   }
 ]
