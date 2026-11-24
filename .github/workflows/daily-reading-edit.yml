@@ -2,8 +2,8 @@ name: Publish daily Reading Edit
 
 on:
   schedule:
-    # Run at 07:00 and 08:00 UTC; script picks 08:00 Europe/London.
-    - cron: '0 7,8 * * *'
+    - cron: '5 6 * * *'
+      timezone: 'Europe/London'
   workflow_dispatch:
 
 permissions:
