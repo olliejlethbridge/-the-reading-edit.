@@ -1,10 +1,10 @@
 """The Reading Edit: resilient daily publisher (2026-11-22).
 
 Strategy:
-1. Ask the OpenAI Responses API to discover new personality-led archival articles.
+1. Ask the OpenAI Responses API for gripping stories and fascinating people.
 2. Independently reject repeat URLs, titles, and recently featured people.
-3. If discovery is empty/blocked, draw from a LIMITED manually researched,
-   original-source archival reserve. This prevents an empty edition when search
+3. If discovery is empty/blocked, draw from LIMITED manually researched,
+   original-source adventure, historical figure and personality archives. This prevents an empty edition when search
    returns [] but is not a substitute for ongoing new discovery indefinitely.
 4. Append only to articles.json. Never delete or replace published entries.
 
@@ -28,6 +28,99 @@ from zoneinfo import ZoneInfo
 FEED = Path(__file__).resolve().parent / "articles.json"
 NOW = datetime.now(ZoneInfo("Europe/London"))
 TODAY = NOW.date().isoformat()
+
+# Historically rooted, character-led long reads whose original articles were
+# checked against the publishers' pages. Historical significance alone is NOT
+# enough: these pieces are chosen for irresistible protagonists or narratives.
+HISTORICAL_RESERVE = [
+    {
+        "title": "Who Was Casanova?", "publication": "Smithsonian Magazine",
+        "date": "April 2012", "minutes": 21, "subject": "Giacomo Casanova",
+        "description": "The Venetian gambler, fugitive and self-invented charmer covered Europe by stagecoach, befriended rulers and writers and escaped from prison. A richly anecdotal portrait of a far stranger intellectual and adventurer than the legend suggests.",
+        "url": "https://www.smithsonianmag.com/travel/who-was-casanova-160003650/",
+    },
+    {
+        "title": "Encore! Encore!", "publication": "Smithsonian Magazine",
+        "date": "September 2006", "minutes": 12, "subject": "Lorenzo Da Ponte",
+        "description": "Mozart's librettist was also a priest, a charming rogue, a notorious lover, a fugitive and a serial bankrupt. His next improbable act began when he arrived in America with almost nothing to his name.",
+        "url": "https://www.smithsonianmag.com/history/encore-encore-128245821/",
+    },
+    {
+        "title": "Teddy Roosevelt’s Perilous Expedition on the Amazon",
+        "publication": "Smithsonian Magazine", "date": "April/May 2023",
+        "minutes": 28, "subject": "Theodore Roosevelt and Cândido Rondon",
+        "description": "An ex-president plunges into the Amazon beside a Brazilian explorer whose extraordinary life deserves equal billing. What follows is an arduous river expedition that tests their survival, leadership and nerve.",
+        "url": "https://www.smithsonianmag.com/history/teddy-roosevelt-deadly-amazon-expedition-180981807/",
+    },
+    {
+        "title": "Stanley Meets Livingstone", "publication": "Smithsonian Magazine",
+        "date": "October 2003", "minutes": 25,
+        "subject": "Henry Morton Stanley and David Livingstone",
+        "description": "A swaggering American journalist sets out across nineteenth-century Africa to find the missing David Livingstone. An absorbing tale of obsession, hardship, pride and one of history's most famous meetings.",
+        "url": "https://www.smithsonianmag.com/history/stanley-meets-livingstone-91118102/",
+    },
+]
+
+# Independently verified story-led pieces; deliberately not restricted to wealth,
+# fame or glamorous society. These are actual, directly linked reported articles.
+ADVENTURE_RESERVE = [
+    {
+        "title": "The Shipwrecks From John Franklin’s Doomed Arctic Expedition Were Exactly Where the Inuit Said They Would Be",
+        "publication": "Smithsonian Magazine", "date": "May 19, 2025", "minutes": 25,
+        "subject": "Franklin expedition",
+        "description": "In 1845 two Royal Navy ships vanished into the Arctic with 129 men. An absorbing investigation of their doomed search for the Northwest Passage, and the eyewitness accounts that eventually helped solve the mystery.",
+        "url": "https://www.smithsonianmag.com/history/the-shipwrecks-from-john-franklins-doomed-arctic-expedition-were-exactly-where-the-inuit-said-they-would-be-180986627/",
+    },
+    {
+        "title": "Why a Minnesota Man Walked Around the World, Traversing 13 Countries and 14,450 Miles in Four Years",
+        "publication": "Smithsonian Magazine", "date": "October 4, 2024", "minutes": 19,
+        "subject": "David Kunst",
+        "description": "Two brothers walked out of their Minnesota hometown on a wildly ambitious round-the-world expedition. The journey took them through palaces, deserts and mortal danger—and only one would make it home.",
+        "url": "https://www.smithsonianmag.com/history/why-a-minnesota-man-walked-around-the-world-traversing-13-countries-and-14450-miles-in-four-years-180985172/",
+    },
+    {
+        "title": "The Last Days of John Allen Chau",
+        "publication": "Outside", "date": "July 24, 2019", "minutes": 28,
+        "subject": "John Allen Chau",
+        "description": "Why did a restless young American attempt to reach one of the world's most isolated island communities? A deeply reported and unsettling reconstruction of an obsession, a forbidden journey and its fatal consequences.",
+        "url": "https://www.outsideonline.com/outdoor-adventure/exploration-survival/john-allen-chau-life-death-north-sentinel",
+    },
+    {
+        "title": "The Incredible True Story of the Henrietta C.",
+        "publication": "Outside", "date": "June 20, 2018", "minutes": 27,
+        "subject": "Henrietta C. shipwreck",
+        "description": "A Chesapeake Bay crab boat radioed a mayday during a vicious storm, then fell silent. With the vessel's fate unknown, a close-knit island community launched a desperate rescue—a tremendous piece of scene-by-scene narrative reporting.",
+        "url": "https://www.outsideonline.com/outdoor-adventure/exploration-survival/henrietta-c/",
+    },
+    {
+        "title": "The Human Antivenom Project",
+        "publication": "Outside", "date": "May 16, 2019", "minutes": 20,
+        "subject": "Tim Friede",
+        "description": "A Wisconsin mechanic deliberately endured hundreds of venomous snakebites to make himself resistant to lethal toxins. Then a scientist discovered him online—and the improbable experiment took a startling turn.",
+        "url": "https://www.outsideonline.com/outdoor-adventure/exploration-survival/snakebite-antivenom-tim-friede",
+    },
+    {
+        "title": "Alexandra David-Néel, the first European woman to see Lhasa",
+        "publication": "The Guardian", "date": "June 14, 2020", "minutes": 6,
+        "subject": "Alexandra David-Néel",
+        "description": "Anarchist, opera singer, scholar and adventurer, she disguised herself to enter Tibet, travelled well into old age and renewed her passport at 100. A short but irresistible introduction to a singular life.",
+        "url": "https://www.theguardian.com/travel/2020/jun/14/explorer-alexandra-david-neel-first-western-woman-lhasa-tibet",
+    },
+    {
+        "title": "The ‘Air-minded’ Socialite",
+        "publication": "Smithsonian Air & Space", "date": "June 19, 2019", "minutes": 7,
+        "subject": "Margery Durant",
+        "description": "At 44, after three marriages and a wildly eventful life, the daughter of General Motors' founder set out on an audacious 12,000-mile flying adventure in a Lockheed Vega.",
+        "url": "https://www.smithsonianmag.com/air-space-magazine/margery-durant-post-180971668/",
+    },
+    {
+        "title": "The Forgotten American Explorer Who Discovered Huge Parts of Antarctica",
+        "publication": "Smithsonian Magazine", "date": "March 2020", "minutes": 14,
+        "subject": "Charles Wilkes",
+        "description": "In the nineteenth century, an exacting and controversial naval commander led a round-the-world expedition that helped establish Antarctica's continental dimensions—an extraordinary voyage overshadowed by its leader's reputation.",
+        "url": "https://www.smithsonianmag.com/science-nature/charles-wilkes-antarctica-explorer-180974432/",
+    },
+]
 
 # Pre-researched original-source pieces, not model-generated links.
 # Research verified titles/source URLs on 22 Nov 2026. Magazine archive
@@ -208,21 +301,44 @@ def known_person(article):
 def from_api(key, previous_titles):
     """One short discovery attempt; an empty result is expected occasionally."""
     prompt = (
-        "Search the web for 6 real, directly linked, substantial magazine or archival "
-        "articles profiling people with extraordinary CHARISMA, swagger, outrageous "
-        "adventures, irresistibly unconventional lives or magnetic personalities. "
-        "We want the spirit of Peter Beard, Steve McQueen, Truman Capote, Ava Gardner, "
-        "Kennedy family, daredevil explorers, colourful rogues and high-society "
-        "eccentrics. Discover *different* people, not those same examples. "
-        "Prioritise good storytelling and original magazine sources such as "
-        "Vanity Fair, Esquire, Smithsonian, The New Yorker, and Tatler. "
-        "Avoid news, fashion/shopping lists, corporate biographies and generic luxury. "
-        "Use authentic article titles, accurate dates or 'Date not stated', short vivid "
-        "descriptions and HTTPS links. Do not invent links or titles. "
-        "Do not repeat these published article titles: "
-        + json.dumps(previous_titles[-35:], ensure_ascii=False)
-        + ". Return JSON of the requested shape; fewer than six if necessary."
+        "Use web search to find 6 real, substantial, superbly written magazine "
+        "features or archival articles about FASCINATING PEOPLE OR EXTRAORDINARY TRUE STORIES. "
+        "A great central character is welcome—magnetic, rebellious, outrageous, witty, "
+        "eccentric, daring—but a gripping event can be equally irresistible even if "
+        "the people were ordinary. We want pieces that make us think either "
+        "'God, I wish I'd met that person' OR 'How on earth did that happen?' "
+        "Especially seek adventures, explorers and eccentric travellers, perilous "
+        "expeditions, remarkable survival, shipwrecks, daring escapes, aviation feats, "
+        "lost-world mysteries, astonishing cons, exploits, intrigue and improbable "
+        "historical episodes. Include beautifully written character portraits from "
+        "ANY CENTURY, including ancient, medieval, Renaissance, eighteenth- and "
+        "nineteenth-century history. Search for historical figures who were "
+        "bold, witty, charismatic, outrageous, brilliant eccentrics or magnetic "
+        "rogues, with vivid specific stories: for example Casanova, Lorenzo "
+        "Da Ponte, Isabella Bird or Richard Francis Burton. These are examples "
+        "of personality and story, NOT names that must recur. Equally consider "
+        "unexpected figures and lesser-known lives. An important monarch, "
+        "general, inventor or scholar is NOT eligible merely for being important. "
+        "Do NOT assume glamour, great wealth, famous surnames, "
+        "attractive people, expensive homes or fashionable parties are interesting "
+        "IN THEMSELVES. A society profile belongs here only when its character or "
+        "story is truly irresistible. Prioritise tension, scenes, vividly told "
+        "incidents, astonishing turns and beautiful narrative prose rather than "
+        "career summaries or dry biographies. Any era or part of the world. "
+        "Search excellent archives broadly: Smithsonian, Outside, National Geographic, "
+        "The New Yorker, The Atlantic, BBC long reads, Esquire, Vanity Fair, "
+        "Smithsonian History, The Paris Review, History Today, "
+        "The Guardian's long reads, and other serious narrative publications. "
+        "Avoid travel tips, lists, fashion/shopping, generic celebrity/luxury, "
+        "business advice, routine current affairs and clickbait. "
+        "Use authentic titles, confirmed publication dates or 'Date not stated', "
+        "accurate engaging descriptions, varied subjects and original HTTPS article URLs. "
+        "Don't invent links, titles or details, and don't repeat these published titles: "
+        + json.dumps(previous_titles[-70:], ensure_ascii=False)
+        + ". Return JSON in the requested shape, fewer than six if quality is weak. "
+        "For non-person-led incidents, put the event or expedition in the subject field."
     )
+
     fields = {
         "title": {"type": "string"},
         "publication": {"type": "string"},
@@ -332,10 +448,10 @@ def append_article(source, n):
 
 
 def main():
-    # Two UTC cron triggers cover UK daylight-savings clock changes. Don't
+    # A timezone-aware 06:05 London cron avoids UK daylight-savings issues. Don't
     # block a delayed runner; a date-tagged edition prevents repeats.
-    if os.environ.get("GITHUB_EVENT_NAME") == "schedule" and NOW.hour < 8:
-        print("Before 08:00 Europe/London; skipping", flush=True)
+    if os.environ.get("GITHUB_EVENT_NAME") == "schedule" and NOW.hour < 6:
+        print("Before 06:00 Europe/London; skipping", flush=True)
         return
 
     existing = json.loads(FEED.read_text(encoding="utf-8"))
@@ -362,11 +478,25 @@ def main():
     else:
         print("::warning::Missing API key: publishing researched reserve only", flush=True)
 
-    # Always fill from independently researched archival pieces if the model's
-    # discovery is thin. 3 articles is the daily target; no weak padding.
-    for article in EDITORIAL_RESERVE:
-        if len(selected) >= 3:
-            break
+    # Rotate discovery by quality-led pool rather than letting glamorous reserve
+    # pieces dominate simply because the AI sometimes returns no usable result.
+    # History is welcome from any century, but a dry "important person" biography
+    # never qualifies. No rigid quotas: we simply diversify the verified backups.
+    archive_pools = [
+        [a for a in ADVENTURE_RESERVE if valid_new(a, existing, selected, reserve=True)],
+        [a for a in HISTORICAL_RESERVE if valid_new(a, existing, selected, reserve=True)],
+        [a for a in EDITORIAL_RESERVE if valid_new(a, existing, selected, reserve=True)],
+    ]
+    positions = [0] * len(archive_pools)
+    turn = 0
+    while len(selected) < 3 and any(positions[i] < len(pool)
+                                     for i, pool in enumerate(archive_pools)):
+        i = turn % len(archive_pools)
+        turn += 1
+        if positions[i] >= len(archive_pools[i]):
+            continue
+        article = archive_pools[i][positions[i]]
+        positions[i] += 1
         if valid_new(article, existing, selected, reserve=True):
             selected.append(append_article(article, len(selected) + 1))
             print("ACCEPT RESERVE:", article["title"], flush=True)
@@ -380,7 +510,7 @@ def main():
                     encoding="utf-8")
     print("PUBLISHED", len(selected), "articles; total", len(existing) + len(selected), flush=True)
     print("Reserve items remaining:", sum(valid_new(item, existing, selected, reserve=True)
-                                           for item in EDITORIAL_RESERVE), flush=True)
+                                           for item in (ADVENTURE_RESERVE + HISTORICAL_RESERVE + EDITORIAL_RESERVE)), flush=True)
 
 
 if __name__ == "__main__":
