@@ -139,5 +139,38 @@
     "url": "https://www.vanityfair.com/hollywood/2021/04/errol-flynn-autobiography-wicked-wicked-ways",
     "subject": "Errol Flynn",
     "added_on": "2026-11-23"
+  },
+  {
+    "id": "daily-20261124-1",
+    "title": "All That Glittered",
+    "publication": "Vanity Fair",
+    "date": "August 1998",
+    "minutes": 28,
+    "description": "Inside the extravagant life of the Mexican-born host whose legendary 1951 Venice costume ball helped define a vanished world of European society.",
+    "url": "https://www.vanityfair.com/magazine/1998/08/dunne199808",
+    "subject": "Charles de Beistegui",
+    "added_on": "2026-11-24"
+  },
+  {
+    "id": "daily-20261124-2",
+    "title": "Bye Society",
+    "publication": "Vanity Fair",
+    "date": "April 1988",
+    "minutes": 32,
+    "description": "Truman Capote charms his way into the confidence of New York's most dazzling women, then loses the world he craved by putting its secrets into print.",
+    "url": "https://www.vanityfair.com/news/1988/04/truman-capote-198804",
+    "subject": "Truman Capote",
+    "added_on": "2026-11-24"
+  },
+  {
+    "id": "daily-20261124-3",
+    "title": "Homicide at Rough Point",
+    "publication": "Vanity Fair",
+    "date": "July/August 2020",
+    "minutes": 26,
+    "description": "At a Newport mansion, one of America's richest and most formidable heiresses becomes embroiled in a death that refuses to fade from society's memory.",
+    "url": "https://www.vanityfair.com/style/2020/07/did-doris-duke-get-away-with-murder",
+    "subject": "Doris Duke",
+    "added_on": "2026-11-24"
   }
 ]
