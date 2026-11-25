@@ -172,5 +172,38 @@
     "url": "https://www.vanityfair.com/style/2020/07/did-doris-duke-get-away-with-murder",
     "subject": "Doris Duke",
     "added_on": "2026-11-24"
+  },
+  {
+    "id": "daily-20261125-1",
+    "title": "The Lost City of Z",
+    "publication": "The New Yorker",
+    "date": "September 19, 2005",
+    "minutes": 60,
+    "description": "David Grann's investigation into the disappearance of British explorer Percy Fawcett and his search for a fabled Amazonian city called 'Z.' A gripping mix of archive-driven detective reporting, atmospheric jungle scenes and a portrait of deadly obsession in the era of empire—the piece later grew into Grann’s book The Lost City of Z.",
+    "url": "https://www.newyorker.com/magazine/2005/09/19/the-lost-city-of-z",
+    "subject": "Percy Fawcett / Amazon exploration / lost-city mystery",
+    "added_on": "2026-11-25"
+  },
+  {
+    "id": "daily-20261125-2",
+    "title": "The Shipwreck Detective",
+    "publication": "The New Yorker",
+    "date": "November 11, 2024",
+    "minutes": 35,
+    "description": "Sam Knight profiles enthusiasts and professionals who hunt for historic shipwrecks using modern technology. The story combines forensic maritime history, vivid salvage scenes and the strange, almost romantic obsession with sunken vessels—an elegiac look at loss, treasure and the people who chase it.",
+    "url": "https://www.newyorker.com/magazine/2024/11/11/the-shipwreck-detective",
+    "subject": "shipwreck hunting / maritime archaeology",
+    "added_on": "2026-11-25"
+  },
+  {
+    "id": "daily-20261125-3",
+    "title": "The Shipwrecks From John Franklin’s Doomed Arctic Expedition Were Exactly Where the Inuit Said They Would Be",
+    "publication": "Smithsonian Magazine",
+    "date": "May 19, 2025",
+    "minutes": 25,
+    "description": "In 1845 two Royal Navy ships vanished into the Arctic with 129 men. An absorbing investigation of their doomed search for the Northwest Passage, and the eyewitness accounts that eventually helped solve the mystery.",
+    "url": "https://www.smithsonianmag.com/history/the-shipwrecks-from-john-franklins-doomed-arctic-expedition-were-exactly-where-the-inuit-said-they-would-be-180986627/",
+    "subject": "Franklin expedition",
+    "added_on": "2026-11-25"
   }
 ]
