@@ -271,5 +271,38 @@
     "url": "https://www.smithsonianmag.com/history/encore-encore-128245821/",
     "subject": "Lorenzo Da Ponte",
     "added_on": "2026-11-27"
+  },
+  {
+    "id": "daily-20261128-1",
+    "title": "The Incredible True Story of the Henrietta C.",
+    "publication": "Outside",
+    "date": "June 20, 2018",
+    "minutes": 27,
+    "description": "A Chesapeake Bay crab boat radioed a mayday during a vicious storm, then fell silent. With the vessel's fate unknown, a close-knit island community launched a desperate rescue—a tremendous piece of scene-by-scene narrative reporting.",
+    "url": "https://www.outsideonline.com/outdoor-adventure/exploration-survival/henrietta-c/",
+    "subject": "Henrietta C. shipwreck",
+    "added_on": "2026-11-28"
+  },
+  {
+    "id": "daily-20261128-2",
+    "title": "Teddy Roosevelt’s Perilous Expedition on the Amazon",
+    "publication": "Smithsonian Magazine",
+    "date": "April/May 2023",
+    "minutes": 28,
+    "description": "An ex-president plunges into the Amazon beside a Brazilian explorer whose extraordinary life deserves equal billing. What follows is an arduous river expedition that tests their survival, leadership and nerve.",
+    "url": "https://www.smithsonianmag.com/history/teddy-roosevelt-deadly-amazon-expedition-180981807/",
+    "subject": "Theodore Roosevelt and Cândido Rondon",
+    "added_on": "2026-11-28"
+  },
+  {
+    "id": "daily-20261128-3",
+    "title": "The Forbidden Love of Sammy Davis Jr. and Kim Novak",
+    "publication": "Vanity Fair",
+    "date": "March 1999",
+    "minutes": 22,
+    "description": "Show-business charisma, Hollywood intrigue and a secret romance collide in a richly reported portrait of two stars under extraordinary pressure.",
+    "url": "https://www.vanityfair.com/style/1999/03/sammy-davis-kim-novak-dating",
+    "subject": "Sammy Davis Jr.",
+    "added_on": "2026-11-28"
   }
 ]
